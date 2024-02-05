@@ -1,0 +1,71 @@
+---
+title: "FMLAssignment-1"
+author: "Tarun"
+date: "2024-02-05"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+```{r}
+library(readr)
+# Reading CSV file using read_csv
+chess_data <- read_csv("C:\\Users\\tarun\\OneDrive\\Desktop\\data set.csv")
+```
+
+```{r}
+#creating quantitative variables vector
+quantitative_vars <- c("width", "height", "xmin", "ymin", "xmax", "ymax") 
+#summary() for descriptive statistics 
+summary(chess_data[, quantitative_vars])
+```
+
+```{r}
+# Print frequency tables for categorical variables
+categorical_vars <- c("filename", "class")
+for (var in categorical_vars) {
+  cat("Frequency table for", var, ":\n")
+  print(table(chess_data[[var]]))
+  cat("\n")
+}
+```
+
+```{r}
+#Transforming one variable that is squaring the width variable 
+head(chess_data)
+
+# Use a for loop to square the 'width' variable
+for (i in 1:nrow(chess_data)) {
+  chess_data$width_squared[i] <- chess_data$width[i]^2
+}
+
+# Displaying the first few rows of the updated dataset
+head(chess_data)
+```
+
+```{r}
+#plotting Bar and scatter plot
+
+# Display the structure of the dataset
+str(chess_data)
+```
+
+```{r}
+library(ggplot2)
+
+# Plotting a histogram for the 'width' variable
+histogram_plot <- ggplot(chess_data, aes(x = xmax)) +
+  geom_histogram(fill = "green", color = "black", alpha = 0.7) +
+  labs(title = " histogram of xmax", x = "xmax", y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# Display the bar graph
+print(histogram_plot)
+# Scatterplot of 'width' vs 'height'
+scatterplot <- ggplot(chess_data, aes(x = xmin , y = ymin)) +
+  geom_point(color = "blue", alpha = 0.7) +
+  labs(title = "Scatterplot of Width vs Height", x = "xmin", y = "ymin")
+
+# Display the scatterplot
+print(scatterplot)
+
+```
