@@ -1,0 +1,209 @@
+---
+title: "Assignment_2"
+author: "Tarun"
+date: "2024-02-25"
+output:
+  pdf_document: default
+  html_document: default
+---
+Description: "The object of the assignment is to apply k-NN for classification."
+#import the needed packages.
+```{r}
+library(caret)
+library(ISLR)
+library('dplyr')
+library(class)
+```
+#Import data
+```{r}
+getwd()
+setwd("C:\\Users\\tarun\\Downloads")
+customer_data <- read.csv("UniversalBank.csv")
+str(customer_data)
+```
+# Initial Research of Customer Data
+```{r}
+head(customer_data)
+summary(customer_data)
+```
+# Looking on values that are missing in Customer Data
+```{r}
+test_missing <- is.na.data.frame('customer_data')
+test_missing
+```
+# Selecting Key Features and Initial Data Inspection
+```{r}
+library(dplyr)
+cleaned_customer_data <- customer_data %>%
+  select(Age, Experience, Income, Family, CCAvg, Education, Mortgage, Personal.Loan, Securities.Account, CD.Account, Online, CreditCard)
+
+head(cleaned_customer_data)
+
+
+```
+# Data Type Conversion and Testing
+```{r}
+cleaned_customer_data$Education <- as.character(cleaned_customer_data$Education)
+is_char <- is.character(cleaned_customer_data$Education)
+
+cleaned_customer_data$Personal.Loan <- as.factor(cleaned_customer_data$Personal.Loan)
+is_fact <- is.factor(cleaned_customer_data$Personal.Loan)
+
+```
+# Dummy Encoding of Education Data
+```{r}
+dummy_encoding <- dummyVars(~Education, data = cleaned_customer_data)
+head(predict(dummy_encoding, cleaned_customer_data))
+encoded_customer_data <- predict(dummy_encoding, cleaned_customer_data)
+
+```
+# Final Customer Data Collection
+```{r}
+final_customer_data <- cleaned_customer_data[, -6]
+final_customer_data <- cbind(final_customer_data, encoded_customer_data)
+head(final_customer_data)
+```
+
+
+# Splitting data for training and validation.
+```{r}
+set.seed(15)
+train_index <- createDataPartition(final_customer_data$Personal.Loan, p = 0.60, list = FALSE)
+train_data <- final_customer_data[train_index,]
+validation_data <- final_customer_data[-train_index,]
+
+```
+
+# Testing Data Collection
+```{r}
+test_data <- data.frame(Age = 40, Experience = 10, Income = 84, Family = 2, CCAvg = 2, Mortgage = 0, Securities.Account = 0, CD.Account = 0, Online = 1, CreditCard = 1, Education_1 = 0, Education_2 = 1, Education_3 = 0)
+test_data
+
+```
+# Data Preprocessing and Model Training Summary
+```{r}
+set.seed(15)
+training_preprocessed <- preProcess(train_data[, -c(7, 12:14)], method = c("center", "scale"))
+model_train <- predict(training_preprocessed, train_data)
+model_validate <- predict(training_preprocessed, validation_data)
+model_test <- predict(training_preprocessed, test_data)
+summary(model_train)
+```
+# K-Nearest Neighbors (KNN) Model Prediction
+```{r}
+set.seed(15)
+train_predictors <- model_train[, -7] 
+validate_predictors <- model_validate[, -7]
+
+train_label <- model_train[, 7]
+validate_label <- model_validate[, 7]
+
+knn_model <- knn(train_predictors, model_test, cl = train_label, k = 1)
+knn_model
+
+```
+# KNN Model Tuning and Selection of Best K
+```{r}
+set.seed(15)
+search_grid <- expand.grid(k = c(1:40))
+tr_control <- 
+model <- train(Personal.Loan ~ ., data = model_train, tuneGrid = search_grid, method = "knn", trControl = trainControl("cv"))
+model 
+
+best_k <- model$bestTune[[1]]
+
+
+```
+# Model Validation and Confusion Matrix
+```{r}
+set.seed(15)
+model_validate <- knn(train_predictors, validate_predictors, cl = train_label, k = best_k)
+
+confusionMatrix(model_validate, validate_label)
+
+```
+# Data division in training, validation, and testing
+```{r}
+set.seed(15)
+train_data_partition <- createDataPartition(final_customer_data$Personal.Loan, p = 0.5, list = FALSE)
+train_customer_data <- final_customer_data[train_data_partition,]
+test_customer_data <- final_customer_data[-train_data_partition,]
+
+customer_data_validate <- createDataPartition(test_customer_data$Personal.Loan, p = 0.6, list = FALSE)
+validate_customer_data <- test_customer_data[customer_data_validate,]
+test_customer_data <- test_customer_data[-customer_data_validate,]
+
+
+```
+# Data Normalization
+```{r}
+set.seed(15)
+normalized_customer_data <- preProcess(train_customer_data[, -c(7, 12:14)], method = c("center", "scale"))
+
+train_data_normalized <- predict(normalized_customer_data, train_customer_data)
+validate_data_normalized <- predict(normalized_customer_data, validate_customer_data)
+test_data_normalized <- predict(normalized_customer_data, test_customer_data)
+
+```
+# Separating Predictors and Labels for Training, Validation, and Testing
+```{r}
+set.seed(15)
+train_predictor <- train_data_normalized[, -7]
+validate_predictor <- validate_data_normalized[, -7]
+test_predictor <- test_data_normalized[, -7]
+
+train_label <- train_data_normalized[, 7]
+validate_label <- validate_data_normalized[, 7]
+test_label <- test_data_normalized[, 7]
+
+
+```
+# KNN Model Training
+```{r}
+set.seed(15)
+train_model <- knn(train_predictor, train_predictor, cl = train_label, k = best_k)
+head(train_model)
+
+```
+# KNN Model Validation
+```{r}
+set.seed(15)
+validation_model <- knn(train_predictor, validate_predictor, cl = train_label, k = best_k)
+head(validation_model)
+
+```
+# KNN Model Testing
+```{r}
+set.seed(15)
+test_model <- knn(train_predictor, test_predictor, cl = train_label, k = best_k)
+head(test_model)
+
+```
+# Confusion Matrix for Training Model
+```{r}
+set.seed(15)
+confusionMatrix(train_model, train_label)
+
+# Number of miscalculations = 0. Accuracy is 100% for training model.
+
+```
+# Confusion Matrix for Validation Model
+```{r}
+set.seed(15)
+confusionMatrix(validation_model, validate_label)
+
+# Number of miscalculations = 68. Accuracy is 95% for validation model.
+
+```
+# Confusion Matrix for Test Model
+```{r}
+set.seed(15)
+confusionMatrix(test_model, test_label)
+
+# Number of miscalculations = 36. Accuracy is 96% for Test Model.
+
+```
+#conclusion:the training data results are more accurate and sensitive.
+#The matrices provided were applied for calculating the results for the Test, Training, and Validation sets, which are 96%,100% and 95%, respectively.
+#The model performs well in all sets, with the training set showing the best accuracy. It means that the model has properly learned from the training data and is able to apply well to unseen data.The K-Nearest Neighbors (KNN) algorithm reliably predicts customer behavior in this dataset, making it valuable for informing business decisions. 
+
