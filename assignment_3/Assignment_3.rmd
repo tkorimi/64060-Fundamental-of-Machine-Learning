@@ -1,0 +1,165 @@
+---
+title: "Assignment_3"
+author: "Tarun"
+date: "2024-03-07"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+Description:"The purpose of this Assignment is to use  Naive Bayes for classification".
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Load the required libraries
+```{r}
+library(caret)
+library(e1071)
+library(class)
+library(tidyverse)
+```
+## Get present working directory
+```{r}
+getwd()
+setwd("C:\\Users\\tarun\\Downloads")
+customer_data <- read.csv("UniversalBank.csv")
+str(customer_data)
+```
+# Converting relevant columns to factor variables and checking their factor status.
+# Checking the structure of the dataset after conversion.
+```{r}
+customer_data$Online <- as.factor(customer_data$Online)
+is.factor(customer_data$Online)
+customer_data$CreditCard <- as.factor(customer_data$CreditCard)
+is.factor(customer_data$CreditCard)
+customer_data$Personal.Loan <- as.factor(customer_data$Personal.Loan)
+is.factor(customer_data$Personal.Loan)
+str(customer_data)
+```
+#Data partition into Training and Validation.
+```{r}
+set.seed(15)
+customer_data1 <- createDataPartition(customer_data$Personal.Loan, p=0.60, list = FALSE)
+train_customer <- customer_data[customer_data1,]
+validate_customer <- customer_data[-customer_data1,]
+```
+# Data Normalization.
+```{r}
+norm_data <- preProcess(train_customer[,-c(10,13,14)], method = c("center", "scale"))
+predict_tdata <- predict(norm_data, train_customer)
+predict_vdata <- predict(norm_data, validate_customer)
+summary(predict_tdata)
+```
+#A. Creating Pivot Table with Online as column variable and CC, Personal.Loan as row variables.
+```{r}
+pivot_customer<- ftable(predict_tdata$Personal.Loan, predict_tdata$Online, predict_tdata$CreditCard, dnn=c('Personal.loan','CreditCard', 'Online'))
+pivot_customer
+```
+#B.Probability of Loan Acceptance (Loan=1) conditional on CC=1 and Online=1.
+```{r}
+prob_customer<-pivot_customer[4,2]/(pivot_customer[2,2]+pivot_customer[4,2])
+prob_customer
+```
+
+#C. Probability for personal loan and Online.
+```{r}
+pivot_customer1 <- ftable(predict_tdata$Personal.Loan, predict_tdata$Online, dnn=c('PersonalLoan','Online'))
+pivot_customer1
+```
+#C. Probability for personal loan and CreditCard.
+```{r}
+pivot_customer2 <- ftable(predict_tdata$Personal.Loan, predict_tdata$CreditCard, dnn=c('PersonalLoan','CreditCard'))
+pivot_customer2
+```
+
+#D.Computation of Quantities(i).P(CC=1 | Loan= 1)
+```{r}
+prob_customer1 <- pivot_customer2[2,2] / (pivot_customer2[2,2] + pivot_customer2[2,1])
+prob_customer1
+```
+#D.Computation of Quantities(ii).P(Online=1 | Loan=1)
+```{r}
+prob_customer2 <- pivot_customer1[2,2] / (pivot_customer1[2,2] + pivot_customer1[2,1])
+prob_customer2
+```
+#D.Computation of Quantities(iii).P(Loan=1)
+```{r}
+prob_customer3 <- ftable(predict_tdata$Personal.Loan)
+prob_customer3
+prob_customer_3 <- prob_customer3[1,2] / (prob_customer3[1,2] + prob_customer3[1,1])
+prob_customer_3
+```
+#D.Computation of Quantities(iv).P(CC=1 | Loan=0)
+```{r}
+prob_customer4 <- pivot_customer2[1,2] / (pivot_customer2[1,2] + pivot_customer2[1,1])
+prob_customer4
+```
+#D.Computation of Quantities(v).P(Online=1 | Loan=0)
+```{r}
+prob_customer5 <- pivot_customer1[1,2] / (pivot_customer1[1,2] + pivot_customer1[1,1])
+prob_customer5
+```
+#D.Computation of Quantities(vi).P(Loan=0)
+```{r}
+prob_customer6 <- ftable(predict_tdata$Personal.Loan)
+prob_customer6
+prob_customer_6 <- prob_customer6[1,1] / (prob_customer6[1,1] + prob_customer6[1,2])
+prob_customer_6                     
+```
+#E. Computing Naive Bayes using conditional probabilities derived from D.
+```{r}
+nb_customer <- (prob_customer1 * prob_customer2 * prob_customer_3) / (prob_customer1 * prob_customer2 * prob_customer_3 + prob_customer4 * prob_customer5 * prob_customer_6)
+nb_customer
+```
+
+#F. Compare the values of answers from B. and E. Compare this value to that got from the pivot table in (B). Which is the more accurate estimate?
+The probabilities calculated using the Bayes probability, i.e., B, is 0.09072978, while the probability obtained from Naive Bayes is 0.09390827. The comparison of Bayes with Naive Bayes shows that Naive Bayes is more probable.
+
+#G. Using Naive Bayes directly applied to the data.
+```{r}
+nb_model <- naiveBayes(Personal.Loan ~ Online + CreditCard, data = predict_tdata)
+nb_model
+```
+While utilizing the two tables generated in step C provides a clear and direct method for understanding how the Naive Bayes model computes P(LOAN=1|CC=1,Online=1), the pivot table in step B offers a quick approach to calculate P(LOAN=1|CC=1,Online=1) without relying on the Naive Bayes model.
+However, the prediction made by the model is less likely than the probability manually determined in step E. Despite this, the Naive Bayes model produces the same probability predictions as the earlier techniques. The estimated probability is more likely than the one obtained from step B. This discrepancy could be attributed to the manual calculation involved in step E, which introduces the possibility of errors when rounding fractions and provides only an approximation.
+# RD confusion matrix about Train_Data
+# Training
+```{r}
+predicting.class <- predict(nb_model, newdata = train_customer)
+confusion_matrix_train <- confusionMatrix(predicting.class, train_customer$Personal.Loan)
+confusion_matrix_train
+```
+# RD confusion matrix about Validation_Data
+# Validation
+```{r}
+predicting.class <- predict(nb_model, newdata = validate_customer)
+confusion_matrix_validation <- confusionMatrix(predicting.class, validate_customer$Personal.Loan)
+confusion_matrix_validation
+```
+# Validation set
+```{r}
+predicting.prob <- predict(nb_model, newdata = validate_customer, type = "raw")
+predicting.class <- predict(nb_model, newdata = validate_customer)
+confusion_matrix_validation <- confusionMatrix(predicting.class, validate_customer$Personal.Loan)
+confusion_matrix_validation
+```
+
+# Assessing the model's performance using Receiver Operating Characteristic (ROC) analysis.
+# Plotting the ROC curve with the optimal threshold marked.
+```{r}
+library(pROC)
+roc(validate_customer$Personal.Loan, predicting.prob[,2])
+plot.roc(validate_customer$Personal.Loan, predicting.prob[,2], print.thres = "best")
+```
+
+
+
+
+While the Naive Bayes model is good, at predicting probabilities it seems that setting a value of 0.906 could improve how sensitive and specific the predictions are. Changing this value to 0.906 would lower sensitivity to 0.495. Increase the accuracy to 0.576. This change might make the model work better and improve its accuracy when making loan approvals.
+
+
+
+
+
+
+
