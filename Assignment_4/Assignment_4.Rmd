@@ -1,0 +1,124 @@
+---
+title: "Assignment_4"
+author: "Tarun"
+date: "2024-03-15"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+Description:"The purpose of this assignment is to use k-Means for clustering".
+load the required libraries
+```{r}
+library(caret)
+library(readr)
+library(ggplot2)
+library(factoextra)
+library(flexclust)
+library(cluster)
+library(tidyverse)
+```
+# Get the current working directory
+```{r}
+getwd()
+```
+# Set the working directory to "C:/Users/tarun/Downloads"
+```{r}
+setwd("C:/Users/tarun/Downloads")
+```
+# Read the CSV file "Pharmaceuticals.csv" and store it in the data frame named "Pharma_Assignment4"
+```{r}
+Pharma_Assignment4 <- read.csv("Pharmaceuticals.csv")
+```
+# Print the structure of the data frame
+```{r}
+str(Pharma_Assignment4)
+```
+
+# Print a summary of the data frame
+```{r}
+summary(Pharma_Assignment4)
+```
+#a. Use only the numerical variables (1 to 9) to cluster the 21 firms. Justify the various choices made inconducting the cluster analysis, such as weights for different variables, the specific clustering algorithm(s)used, the number of clusters formed, and so on.
+# Select only the numerical variables from the data frame
+# Preprocess the numerical variables by scaling them using the range method
+```{r}
+norm_mean<- Pharma_Assignment4 %>% select('Market_Cap', 'Beta', 'PE_Ratio', 'ROE', 'ROA', 'Asset_Turnover', 'Leverage', 'Rev_Growth', 'Net_Profit_Margin')
+#scaling the data.
+norm_train <- preProcess(norm_mean, method = "range")
+predictions<-predict(norm_train, norm_mean)
+```
+# Determine the optimal number of clusters using the Elbow method
+```{r}
+fviz_nbclust(predictions, kmeans, method = "wss")
+```
+# Determine the optimal number of clusters using the Silhouette method
+```{r}
+fviz_nbclust(predictions, kmeans, method = "silhouette")
+```
+# Determine the optimal number of clusters using the Gap static method
+```{r}
+fviz_nbclust(predictions, kmeans, method = "gap_stat")
+```
+
+
+#From above we calculate kmeans optimal being k=5
+```{r}
+k_means_5 <- kmeans(predictions, centers = 5, nstart = 25)
+k_means_5$centers
+```
+#
+```{r}
+k_means_5 <- kmeans(predictions, centers = 5, nstart = 25)
+k_means_5$centers
+```
+
+# Display the Pharmaceuticals data frame
+```{r}
+Pharmaceuticals <- data.frame(predictions, cluster = k_means_5$cluster)
+Pharmaceuticals
+```
+```{r}
+set.seed(1515)
+k5 <- kmeans(Pharmaceuticals, centers = 5, nstart = 25)
+k5 $centers
+fviz_cluster(k5, data = Pharmaceuticals)
+k5
+Distance <- dist(Pharmaceuticals, method = "euclidian")
+fviz_dist(Distance)
+Fitting <- kmeans(Pharmaceuticals,3)
+aggregate(Pharmaceuticals,by = list(Fitting$cluster), FUN = mean)
+Pharma <- data.frame(Pharmaceuticals,Fitting$cluster)
+Pharma
+```
+
+
+# Create a cluster plot
+```{r}
+clusplot(Pharmaceuticals, Pharmaceuticals$cluster, color = TRUE, shade = TRUE,
+         labels = 2, lines = 0)
+```
+
+#b. Interpret the clusters with respect to the numerical variables used in forming the clusters.
+# Combine cluster assignments with Location and Exchange columns
+```{r}
+aggregate(Pharmaceuticals, by = list(Fitting$cluster), FUN = mean)
+Pharmacy <- data.frame(Pharmaceuticals,k5$cluster)
+Pharmacy
+```
+
+c. Is there a pattern in the clusters with respect to the numerical variables (10 to 12)
+
+# Create a bar plot using ggplot(fill=Location)
+```{r}
+Assignment4 <- Pharma_Assignment4[12:14] %>% mutate(Clusters=k5$cluster)
+ggplot(Assignment4, mapping = aes(factor(Clusters), fill=Median_Recommendation))+geom_bar(position='dodge')+labs(x ='Clusters')
+ggplot(Assignment4, mapping = aes(factor(Clusters),fill = Location))+geom_bar(position = 'dodge')+labs(x ='Clusters')
+ggplot(Assignment4, mapping = aes(factor(Clusters),fill = Exchange))+geom_bar(position = 'dodge')+labs(x ='Clusters')
+
+```
+
+#d.Provide an appropriate name for each cluster using any or all of the variables in the dataset
+Cluster 1 represents firms with strong buy potential, Cluster 2 consists of firms with uncertain investment potential, and Cluster 3 comprises firms with moderate buy potential.
+
+
