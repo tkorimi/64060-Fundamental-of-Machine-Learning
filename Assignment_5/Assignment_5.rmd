@@ -1,0 +1,244 @@
+---
+title: "Assignment_5"
+author: "Tarun"
+date: "2024-04-06"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+Description:"The purpose of this assignment is to use Hierarchical Clustering"
+
+#Load the required Libraries
+```{r}
+library(cluster)
+library(caret)
+library(dendextend)
+library(knitr)
+library(factoextra)
+```
+# Load the readr package for reading CSV files
+# Read the CSV file into a data frame named tk_Cereals
+# Create a new data frame Num_data containing only columns 4 through 16 of tk_Cereals
+```{r}
+library(readr)
+tk_Cereals <- read.csv("C:\\Users\\tarun\\Downloads\\Cereals.CSV")
+Num_data <- data.frame(tk_Cereals[,4:16])
+```
+# Remove rows with missing values from the Num_data data frame
+```{r}
+Num_data <- na.omit(Num_data)
+```
+# Scale the numerical data in Num_data using the scale() function
+```{r}
+tk_Cereals_normalize <- scale(Num_data)
+```
+#Task 1
+# Calculate the Euclidean distance between rows of tk_Cereals_normalize
+# Perform hierarchical clustering using complete linkage
+```{r}
+Dist <- dist(tk_Cereals_normalize, method = "euclidean")
+H_clust <- hclust(Dist,method = "complete")
+```
+# Plot the hierarchical clustering dendrogram
+```{r}
+plot(H_clust,cex=0.7,hang = -1)
+```
+The dendogram helps us figuring out how many clusters this dataset needs to be identified.
+
+# Perform hierarchical clustering using different linkage methods
+```{r}
+single_Hclust <- agnes(tk_Cereals_normalize,method = "single")
+complete_Hclust <- agnes(tk_Cereals_normalize,method = "complete")
+average_Hclust <- agnes(tk_Cereals_normalize,method = "average")
+ward_Hclust <- agnes(tk_Cereals_normalize,method = "ward")
+```
+# Print the coefficient for the single linkage hierarchical clustering
+```{r}
+print(single_Hclust$ac)
+```
+# Print the coefficient for the complete linkage hierarchical clustering
+```{r}
+print(complete_Hclust$ac)
+```
+# Print the coefficient for the average linkage hierarchical clustering
+```{r}
+print(average_Hclust$ac)
+```
+# Print the coefficient for the Ward linkage hierarchical clustering
+```{r}
+print(ward_Hclust$ac)
+```
+The ward technique is the most effective, as indicated by its value of 0.9046042, which is clear from the given information.
+
+#Task2: The number of clusters you would select?
+# Plot the dendrogram of agnes clustering using the ward method
+# Add rectangles around the clusters
+```{r}
+pltree(ward_Hclust,cex=0.5,hang=-1,main = "Dendrogram of agnes (using ward)")
+rect.hclust(ward_Hclust,k=5,border = 2:7)
+```
+
+# Cut the hierarchical clustering tree into 5 clusters using the ward method
+# Combine the clustering result with the original normalized data
+# Visualize the clusters using the fviz_cluster function
+```{r}
+T_Group <- cutree(ward_Hclust,k=5)
+S_frame_2 <- as.data.frame(cbind(tk_Cereals_normalize,T_Group))
+fviz_cluster(list(data=S_frame_2,cluster=T_Group))
+```
+From the observation mentioned above 5 clusters can be selected
+#TASK3-Assessing the clusters' stability and structure
+# Set the random seed for reproducibility
+# Create partition_A containing the first 55 rows of Num_data
+# Create partition_B containing rows 56 to 74 of Num_data
+```{r}
+set.seed(123)
+partition_A <- Num_data[1:55,]
+partition_B <- Num_data[56:74,]
+```
+# Perform hierarchical clustering on partition_A using different linkage methods
+# Combine and display the coefficients for different linkage methods
+```{r}
+single_tk <- agnes(scale(partition_A), method="single")
+complete_tk <- agnes(scale(partition_A), method="complete")
+average_tk <- agnes(scale(partition_A), method="average") 
+ward_tk <- agnes(scale(partition_A), method="ward") 
+cbind(single=single_tk$ac,complete=complete_tk$ac,average=average_tk$ac,ward=ward_tk$ac)
+```
+# Plot the dendrogram of agnes clustering on partition_A using the ward method
+# Add rectangles around the clusters
+```{r}
+pltree(ward_tk,cex=0.6,hang=-1,main = "Dendogram agnes with partitioned Data(using ward)")
+rect.hclust(ward_tk,k=6,border=2:7)
+```
+# Cut the hierarchical clustering tree into 6 clusters using the ward method
+```{r}
+cut_2 <- cutree(ward_tk,k=6)
+```
+# Combine partition_A with the cluster assignments from cut_2
+# Display the rows of tk_result where cut_2 is equal to 1
+```{r}
+tk_result <- as.data.frame(cbind(partition_A,cut_2))
+tk_result[tk_result$cut_2==1,]
+```
+# Calculate the centroid for cluster 1
+# Display the rows of tk_result where cut_2 is equal to 2
+```{r}
+one_centroid <- colMeans(tk_result[tk_result$cut_2==1,])
+tk_result[tk_result$cut_2==2,]
+```
+# Calculate the centroid for cluster 2
+# Display the rows of tk_result where cut_2 is equal to 3
+```{r}
+two_centroid <- colMeans(tk_result[tk_result$cut_2==2,])
+tk_result[tk_result$cut_2==3,]
+```
+# Calculate the centroid for cluster 3
+# Display the rows of tk_result where cut_2 is equal to 4
+```{r}
+three_centroid <- colMeans(tk_result[tk_result$cut_2==2,])
+tk_result[tk_result$cut_2==4,]
+```
+# Calculate the centroid for cluster 4
+# Combine the centroids and partition_B into a new data frame
+```{r}
+four_centroid <- colMeans(tk_result[tk_result$cut_2==4,])
+centroids <- rbind(one_centroid,two_centroid,three_centroid,four_centroid)
+x2 <- as.data.frame(rbind(centroids[,-14],partition_B))
+```
+# Calculate the distance matrix for x2
+# Convert the distance matrix to a matrix
+# Create a data frame dataframe1 with two columns: data and clusters
+```{r}
+Dist_1 <- get_dist(x2)
+Matrix_1 <- as.matrix(Dist_1)
+dataframe1 <- data.frame(data = seq(1, nrow(partition_B), 1), clusters = rep(0, nrow(partition_B)))
+```
+# Iterate over each row of partition_B
+# Display the dataframe1
+```{r}
+for (i in 1:nrow(partition_B))
+dataframe1[i, 2] <- which.min(Matrix_1[i + 4, 1:4])
+dataframe1
+```
+# Combine the cluster assignments from S_frame_2 and dataframe1 for rows 56 to 74
+```{r}
+cbind(S_frame_2$T_Group[56:74], dataframe1$Clusters)
+```
+Based on the above observation, we obtain 7 False and 12 True. As a result, we may say that the model is only partially stable.
+# Calculate the contingency table comparing cluster assignments from S_frame_2 and dataframe1
+```{r}
+table(S_frame_2$T_Group[56:74] == dataframe1$Clusters)
+```
+#TASK-4In order to identify a cluster of "healthy cereals" for school cafeterias, the data can be used directly in cluster analysis without normalization, focusing on features that indicate a healthy diet.
+# Create a copy of tk_Cereals named Healthy_tk_Cereals
+# Remove rows with missing values from Healthy_tk_Cereals
+# Combine Healthy_tk_Cereals_RD with the cluster assignments from T_Group
+# Display the rows of clust where T_Group is equal to 1
+```{r}
+Healthy_tk_Cereals <- tk_Cereals
+Healthy_tk_Cereals_RD <- na.omit(Healthy_tk_Cereals)
+clust <- cbind(Healthy_tk_Cereals_RD, T_Group)
+clust[clust$T_Group==1,]
+```
+# Display the rows of clust where T_Group is equal to 2
+```{r}
+clust[clust$T_Group==2,]
+```
+# Display the rows of clust where T_Group is equal to 3
+```{r}
+clust[clust$T_Group==3,]
+```
+# Display the rows of clust where T_Group is equal to 4
+```{r}
+clust[clust$T_Group==4,]
+```
+# Calculate the mean rating for the cereals in cluster 1
+```{r}
+mean(clust[clust$T_Group==1,"rating"])
+```
+# Calculate the mean rating for the cereals in cluster 2
+```{r}
+mean(clust[clust$T_Group==2,"rating"])
+```
+# Calculate the mean rating for the cereals in cluster 3
+```{r}
+mean(clust[clust$T_Group==3,"rating"])
+```
+# Calculate the mean rating for the cereals in cluster 4
+```{r}
+mean(clust[clust$T_Group==4,"rating"])
+```
+Given that Cluster 1 has the greatest value, it might be selected using the previously provided statistics. #As a result, Group 1 might be regarded as the cluster associated with a nutritious diet.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
